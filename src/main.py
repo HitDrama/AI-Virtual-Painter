@@ -7,6 +7,8 @@ Controls:
 - 2 fingers (index + middle): Selection mode
 - Press 'q': Quit
 - Press 'c': Clear canvas
+- Press 'h': Toggle hand joints visualization
+- Press 'l': Toggle landmark labels
 """
 import cv2
 from hand_detector import HandDetector
@@ -48,6 +50,8 @@ def main():
     print("  - 1 finger (index): Draw")
     print("  - 2 fingers (index + middle): Select color/tool")
     print("  - Press 'c': Clear canvas")
+    print("  - Press 'h': Toggle hand joints visualization")
+    print("  - Press 'l': Toggle landmark labels")
     print("  - Press 'q': Quit")
     print("=" * 30)
 
@@ -55,6 +59,10 @@ def main():
     detector = HandDetector(max_hands=1, detection_confidence=0.7)
     canvas = Canvas(width, height)
     ui = UI(width, height, header_height=100)
+
+    # Hand joints visualization settings
+    show_hand_joints = False
+    show_labels = True
 
     while True:
         success, frame = cap.read()
@@ -116,13 +124,24 @@ def main():
         # Draw UI header
         frame = ui.draw_header(frame)
 
+        # Draw hand joints visualization if enabled
+        if show_hand_joints and landmarks:
+            frame = detector.draw_hand_joints(frame, show_labels=show_labels, show_ids=True)
+            frame = detector.draw_hand_info_panel(frame)
+
         # Blend canvas with frame
         frame = canvas.blend_with_frame(frame)
 
-        # Show FPS
-        cv2.putText(frame, f"Press 'q' to quit, 'c' to clear",
-                   (width - 350, height - 20),
-                   cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1)
+        # Show controls hint
+        hint_text = "h: joints | l: labels | c: clear | q: quit"
+        cv2.putText(frame, hint_text,
+                   (width - 380, height - 20),
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+
+        # Show hand joints status
+        if show_hand_joints:
+            cv2.putText(frame, "JOINTS: ON", (width - 120, 130),
+                       cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
 
         # Display
         cv2.imshow("AI Virtual Painter", frame)
@@ -134,6 +153,14 @@ def main():
         elif key == ord('c'):
             canvas.clear()
             print("Canvas cleared!")
+        elif key == ord('h'):
+            show_hand_joints = not show_hand_joints
+            status = "ON" if show_hand_joints else "OFF"
+            print(f"Hand joints visualization: {status}")
+        elif key == ord('l'):
+            show_labels = not show_labels
+            status = "ON" if show_labels else "OFF"
+            print(f"Landmark labels: {status}")
 
     cap.release()
     cv2.destroyAllWindows()
